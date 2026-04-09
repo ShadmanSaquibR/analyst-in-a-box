@@ -1,14 +1,13 @@
 streamlit
 langgraph
-langchain-google-genai
+langchain-core
+langchain-groq
 langchain-text-splitters
 transformers
 torch
-torchaudio
-torchvision
 yfinance
 ddgs
 edgartools
-python-dotenv   
+python-dotenv
 defeatbeta-api
 pandas
