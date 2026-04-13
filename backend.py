@@ -13,7 +13,7 @@ load_dotenv()
 import torch
 import yfinance as yf
 from ddgs import DDGS
-from edgar import set_identity, Company
+from edgar import set_identity,Company
 from transformers import pipeline
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
@@ -26,11 +26,12 @@ import time
 from defeatbeta_api.data.ticker import Ticker
 import pandas as pd
 
+
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', message='.*utcnow.*')
 
 # --- 1. AUTHENTICATION ---
-set_identity("ssr2208@columbia.edu") # Apparently, SEC EDGAR requires this
+set_identity(os.getenv("EMAIL_EDGAR_API")) # Apparently, SEC EDGAR requires this
 
 # --- 2. INITIALIZE MODELS ---
 # Using Gemini 2.5 Pro for the free tier speed/limits. Temp 0.0 for deterministic diagnostic logic.
