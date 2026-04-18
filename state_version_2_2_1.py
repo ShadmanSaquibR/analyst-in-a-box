@@ -433,23 +433,3 @@ def run_pipeline(ticker: str) -> dict:
     """Synchronous wrapper around the async LangGraph pipeline.
     Safe to call from Streamlit or any sync context. Returns the final state dict."""
     return asyncio.run(app.ainvoke({"ticker": ticker}))
-
-
-# ============================================================
-# RUN (CLI)
-# ============================================================
-async def main():
-    test_tickers = ["TSLA"]
-    for ticker in test_tickers:
-        print(f"\n{'='*60}\nSTARTING ANALYSIS FOR: {ticker}\n{'='*60}")
-        result = await app.ainvoke({"ticker": ticker})
-        print(f"\n--- FINAL DIAGNOSTIC SCREENING: {ticker} ---\n")
-        print(result["final_report"])
-        print("\n--- FINBERT SENTIMENT METRICS ---")
-        print(f"Internal Sentiment (SEC 10-K): {result['internal_sentiment']:.2f}")
-        print(f"External Sentiment (News):     {result['external_sentiment']:.2f}")
-        print(f"Executive Sentiment (Call):    {result['transcript_sentiment']:.2f}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
