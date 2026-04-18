@@ -88,7 +88,7 @@ class CompanyAnalysisState(TypedDict):
 # ============================================================
 CACHE_DIR = Path(".fsa_cache")
 CACHE_DIR.mkdir(exist_ok=True)
-_CACHE_ENABLED = os.getenv("DEV_CACHE") == "1"
+#_CACHE_ENABLED = os.getenv("DEV_CACHE") == "0"
 
 def disk_cache(fn):
     """Cache fetcher results to disk, keyed by args + today's date.
@@ -121,9 +121,17 @@ def _fetch_financials(ticker: str) -> str:
     bs = stock.balance_sheet
     cf = stock.cashflow
 
-    income_str = inc.iloc[:, :4].to_string() if inc is not None else "Data unavailable"
-    cash_flow_str = cf.iloc[:, :4].to_string() if cf is not None else "Data unavailable"
-    bs_str = bs.iloc[:, :4].to_string() if bs is not None else "Data unavailable"
+    # TEST MODE: 2 years, key rows only — cuts ~70% of financial tokens
+    KEY_INC = ['Total Revenue', 'Gross Profit', 'Operating Income', 'Net Income', 'Diluted EPS']
+    KEY_BS  = ['Total Assets', 'Total Debt', 'Stockholders Equity', 'Current Assets', 'Current Liabilities']
+    KEY_CF  = ['Operating Cash Flow', 'Free Cash Flow', 'Capital Expenditure']
+    def _slim(df, keys):
+        if df is None: return "Data unavailable"
+        rows = [r for r in keys if r in df.index]
+        return df.loc[rows].iloc[:, :2].to_string() if rows else df.iloc[:5, :2].to_string()
+    income_str    = _slim(inc, KEY_INC)
+    cash_flow_str = _slim(cf,  KEY_CF)
+    bs_str        = _slim(bs,  KEY_BS)
 
     try:
         shares_out = stock.info.get('sharesOutstanding', 'N/A')
@@ -189,7 +197,7 @@ def _fetch_financials(ticker: str) -> str:
 @disk_cache
 def _fetch_news(ticker: str) -> List[str]:
     try:
-        results = list(DDGS().text(f"{ticker} stock financial news", max_results=5))
+        results = list(DDGS().text(f"{ticker} stock financial news", max_results=3))
         if not results:
             print(f"   WARNING: DuckDuckGo returned an empty list for {ticker}.")
             return ["News fetch failed."]
@@ -207,7 +215,8 @@ def _fetch_mda(ticker: str) -> str:
         latest = Company(ticker).get_filings(form="10-K").latest()
         mda_text = latest.obj().management_discussion
         if not mda_text:
-            mda_text = latest.text()[:10000]
+            mda_text = latest.text()[:3000]
+        mda_text = mda_text[:3000]
         print(f"   Successfully scraped SEC 10-K MD&A for {ticker} ({len(mda_text)} chars).")
         return mda_text
     except Exception as e:
@@ -224,7 +233,7 @@ def _fetch_transcript(ticker: str) -> str:
             return "Transcript unavailable."
         df = df.sort_values(by=['fiscal_year', 'fiscal_quarter'])
         paragraphs = df.iloc[-1]['transcripts']
-        full_text = " ".join(p.get('content', '') for p in paragraphs)[:10000]
+        full_text = " ".join(p.get('content', '') for p in paragraphs)[:3000]
         print(f"   Successfully scraped Defeat-Beta Transcript for {ticker} ({len(full_text)} chars).")
         return full_text
     except Exception as e:
