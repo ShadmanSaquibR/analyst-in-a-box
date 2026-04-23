@@ -27,6 +27,8 @@ from typing import TypedDict, List
 from dotenv import load_dotenv
 load_dotenv()
 
+DEMO_MODE = os.getenv("DEMO_MODE", "0") == "1"
+
 import torch
 import yfinance as yf
 import pandas as pd
@@ -88,7 +90,7 @@ class CompanyAnalysisState(TypedDict):
 # ============================================================
 CACHE_DIR = Path(".fsa_cache")
 CACHE_DIR.mkdir(exist_ok=True)
-#_CACHE_ENABLED = os.getenv("DEV_CACHE") == "0"
+_CACHE_ENABLED = os.getenv("DEV_CACHE") == "0"
 
 def disk_cache(fn):
     """Cache fetcher results to disk, keyed by args + today's date.
@@ -128,7 +130,9 @@ def _fetch_financials(ticker: str) -> str:
     def _slim(df, keys):
         if df is None: return "Data unavailable"
         rows = [r for r in keys if r in df.index]
-        return df.loc[rows].iloc[:, :2].to_string() if rows else df.iloc[:5, :2].to_string()
+        if DEMO_MODE:
+            return df.loc[rows].iloc[:, :2].to_string() if rows else df.iloc[:5, :2].to_string()
+        return df.loc[rows].to_string() if rows else df.iloc[:5].to_string()
     income_str    = _slim(inc, KEY_INC)
     cash_flow_str = _slim(cf,  KEY_CF)
     bs_str        = _slim(bs,  KEY_BS)
@@ -197,7 +201,7 @@ def _fetch_financials(ticker: str) -> str:
 @disk_cache
 def _fetch_news(ticker: str) -> List[str]:
     try:
-        results = list(DDGS().text(f"{ticker} stock financial news", max_results=3))
+        results = list(DDGS().news(f"{ticker} stock", max_results=8))
         if not results:
             print(f"   WARNING: DuckDuckGo returned an empty list for {ticker}.")
             return ["News fetch failed."]
@@ -215,8 +219,9 @@ def _fetch_mda(ticker: str) -> str:
         latest = Company(ticker).get_filings(form="10-K").latest()
         mda_text = latest.obj().management_discussion
         if not mda_text:
-            mda_text = latest.text()[:3000]
-        mda_text = mda_text[:3000]
+            mda_text = latest.text()[:3000] if DEMO_MODE else latest.text()
+        if DEMO_MODE:
+            mda_text = mda_text[:3000]
         print(f"   Successfully scraped SEC 10-K MD&A for {ticker} ({len(mda_text)} chars).")
         return mda_text
     except Exception as e:
@@ -233,7 +238,9 @@ def _fetch_transcript(ticker: str) -> str:
             return "Transcript unavailable."
         df = df.sort_values(by=['fiscal_year', 'fiscal_quarter'])
         paragraphs = df.iloc[-1]['transcripts']
-        full_text = " ".join(p.get('content', '') for p in paragraphs)[:3000]
+        full_text = " ".join(p.get('content', '') for p in paragraphs)
+        if DEMO_MODE:
+            full_text = full_text[:3000]
         print(f"   Successfully scraped Defeat-Beta Transcript for {ticker} ({len(full_text)} chars).")
         return full_text
     except Exception as e:
@@ -310,7 +317,8 @@ def _chunk(text, size=2000, max_chunks=5):
         "Transcript fetch failed.",
     ):
         return []
-    return [text[i:i+size] for i in range(0, len(text), size)][:max_chunks]
+    chunks = [text[i:i+size] for i in range(0, len(text), size)]
+    return chunks[:max_chunks] if DEMO_MODE else chunks
 
 
 async def sentiment_node(state: CompanyAnalysisState):
@@ -389,10 +397,10 @@ async def synthesis_node(state: CompanyAnalysisState):
                 separators=["\n\n", "\n", ".", " "],
             )
             docs = text_splitter.split_text(raw_transcript)
-            clean_transcript_chunk = docs[0] if docs else "No transcript available."
+            clean_transcript_chunk = (docs[0] if docs else "No transcript available.") if DEMO_MODE else " ".join(docs)
         except Exception as e:
             print(f"WARNING: Smart chunking failed for {ticker}: {e}")
-            clean_transcript_chunk = raw_transcript[:3000]
+            clean_transcript_chunk = raw_transcript[:3000] if DEMO_MODE else raw_transcript
     else:
         clean_transcript_chunk = "No transcript available."
 

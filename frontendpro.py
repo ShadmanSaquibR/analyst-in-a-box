@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import queue
 import re
 import textwrap
@@ -10,12 +11,14 @@ from datetime import datetime
 import streamlit as st
 import yfinance as yf
 
+DEMO_MODE = os.getenv("DEMO_MODE", "0") == "1"
+
 # ==========================================
 # PAGE CONFIG
 # ==========================================
 st.set_page_config(
     page_title="Analyst in a Box",
-    page_icon="📊",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -239,32 +242,67 @@ def run_with_status(ticker: str) -> dict:
     thread.start()
 
     stage_labels = {s[0]: s[1] for s in STAGES}
+    total_stages = len(STAGES) - 1  # exclude "done"
     completed: list = []
 
-    with st.status(f"Analyzing **{ticker}**...", expanded=True) as status:
-        while thread.is_alive() or not progress_q.empty():
-            try:
-                tag = progress_q.get(timeout=0.25)
-            except queue.Empty:
-                continue
+    status_text = st.empty()
+    progress_bar = st.progress(0)
+    stage_log = st.empty()
+    log_lines: list[str] = []
 
-            if isinstance(tag, tuple) and tag[0] == "error":
-                _, tb, msg = tag
-                status.update(label=f"Pipeline error: {msg}", state="error")
-                with st.expander("Traceback"):
-                    st.code(tb)
-                thread.join()
-                return {}
+    status_text.markdown(
+        f"<div style='font-size:0.88rem; font-weight:600; color:#f0f6fc; margin-bottom:6px;'>"
+        f"Analyzing {ticker}</div>"
+        f"<div style='font-size:0.78rem; color:#8b949e;'>Initializing pipeline…</div>",
+        unsafe_allow_html=True,
+    )
 
-            if tag in stage_labels and tag not in completed:
-                completed.append(tag)
-                n = len(completed)
-                total = len(STAGES) - 1
-                icon = "✓" if tag == "done" else "›"
-                st.write(f"{icon} **[{min(n, total)}/{total}]** {stage_labels[tag]}")
-                if tag == "done":
-                    status.update(label=f"Analysis complete — **{ticker}**", state="complete")
-        thread.join()
+    while thread.is_alive() or not progress_q.empty():
+        try:
+            tag = progress_q.get(timeout=0.25)
+        except queue.Empty:
+            continue
+
+        if isinstance(tag, tuple) and tag[0] == "error":
+            _, tb, msg = tag
+            progress_bar.empty()
+            status_text.empty()
+            stage_log.empty()
+            st.error(f"Pipeline error: {msg}")
+            with st.expander("Error details"):
+                st.code(tb)
+            thread.join()
+            return {}
+
+        if tag in stage_labels and tag not in completed:
+            completed.append(tag)
+            n = min(len(completed), total_stages)
+            progress_bar.progress(n / total_stages)
+
+            if tag == "done":
+                status_text.markdown(
+                    f"<div style='font-size:0.88rem; font-weight:600; color:#3fb950; margin-bottom:6px;'>"
+                    f"Analysis complete — {ticker}</div>",
+                    unsafe_allow_html=True,
+                )
+                log_lines.append(f"[{n}/{total_stages}] {stage_labels[tag]}")
+            else:
+                status_text.markdown(
+                    f"<div style='font-size:0.88rem; font-weight:600; color:#f0f6fc; margin-bottom:6px;'>"
+                    f"Analyzing {ticker}</div>"
+                    f"<div style='font-size:0.78rem; color:#8b949e;'>{stage_labels[tag]}…</div>",
+                    unsafe_allow_html=True,
+                )
+                log_lines.append(f"[{n}/{total_stages}] {stage_labels[tag]}")
+
+            stage_log.markdown(
+                "<div style='font-size:0.75rem; color:#484f58; line-height:1.9; margin-top:8px;'>"
+                + "<br>".join(log_lines)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+
+    thread.join()
 
     return result_box[0] if result_box else {}
 
@@ -419,33 +457,75 @@ def _section_label(text: str) -> str:
     )
 
 
-# SVG logo: a box with a rising trend line inside — "quant in a box"
-LOGO_SVG = """
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- outer box -->
-  <rect x="2" y="2" width="28" height="28" rx="6" stroke="#388bfd" stroke-width="1.8" fill="none"/>
-  <!-- grid lines -->
-  <line x1="2" y1="22" x2="30" y2="22" stroke="#21262d" stroke-width="0.8"/>
-  <line x1="2" y1="15" x2="30" y2="15" stroke="#21262d" stroke-width="0.8"/>
-  <!-- trend line -->
-  <polyline points="6,24 11,19 17,21 23,13 27,9"
-            stroke="#3fb950" stroke-width="2" fill="none"
+# Logo: analyst silhouette (head + shoulders) inside a box, with a rising chart line
+_LOGO_PATHS = """
+  <rect x="2" y="2" width="60" height="60" rx="11" fill="#161b22" stroke="#388bfd" stroke-width="2"/>
+  <line x1="8" y1="43" x2="56" y2="43" stroke="#21262d" stroke-width="1"/>
+  <circle cx="32" cy="19" r="8" stroke="#58a6ff" stroke-width="1.8" fill="none"/>
+  <path d="M13 42 Q13 31 32 31 Q51 31 51 42"
+        stroke="#58a6ff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <polyline points="10,58 20,54 30,56 41,50 54,46"
+            stroke="#3fb950" stroke-width="1.7" fill="none"
             stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- end dot -->
-  <circle cx="27" cy="9" r="2" fill="#3fb950"/>
-</svg>
+  <circle cx="54" cy="46" r="2.2" fill="#3fb950"/>
 """
 
-LOGO_SVG_SMALL = """
-<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="2" y="2" width="28" height="28" rx="6" stroke="#388bfd" stroke-width="1.8" fill="none"/>
-  <line x1="2" y1="22" x2="30" y2="22" stroke="#21262d" stroke-width="0.8"/>
-  <line x1="2" y1="15" x2="30" y2="15" stroke="#21262d" stroke-width="0.8"/>
-  <polyline points="6,24 11,19 17,21 23,13 27,9"
-            stroke="#3fb950" stroke-width="2" fill="none"
-            stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="27" cy="9" r="2" fill="#3fb950"/>
-</svg>
+LOGO_SVG = f'<svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
+LOGO_SVG_SMALL = f'<svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
+
+FOOTER_HTML = """
+<div style='border-top:1px solid #21262d; margin-top:56px; padding-top:32px; padding-bottom:28px;'>
+  <div style='display:flex; justify-content:space-between; align-items:flex-start;
+              flex-wrap:wrap; gap:24px; max-width:860px; margin:0 auto;'>
+
+    <div>
+      <div style='font-size:0.9rem; font-weight:600; color:#f0f6fc; margin-bottom:5px;'>
+        Analyst in a Box
+      </div>
+      <div style='font-size:0.76rem; color:#8b949e; line-height:1.7; max-width:220px;'>
+        Institutional-grade equity research<br>generated in seconds using AI &amp; NLP.
+      </div>
+    </div>
+
+    <div>
+      <div style='font-size:0.68rem; color:#8b949e; text-transform:uppercase;
+                  letter-spacing:1.2px; margin-bottom:8px;'>Contact</div>
+      <div style='font-size:0.78rem; color:#8b949e; line-height:1.9;'>
+        <a href="mailto:sy2367@columbia.edu"
+           style='color:#388bfd; text-decoration:none;'>sy2367@columbia.edu</a><br>
+        <a href="mailto:mu2330@columbia.edu"
+           style='color:#388bfd; text-decoration:none;'>mu2330@columbia.edu</a><br>
+        <a href="mailto:ssr2208@columbia.edu"
+           style='color:#388bfd; text-decoration:none;'>ssr2208@columbia.edu</a><br>
+        Columbia University
+      </div>
+    </div>
+
+    <div>
+      <div style='font-size:0.68rem; color:#8b949e; text-transform:uppercase;
+                  letter-spacing:1.2px; margin-bottom:8px;'>Built With</div>
+      <div style='font-size:0.76rem; color:#8b949e; line-height:1.9;'>
+        FinBERT &nbsp;·&nbsp; LLaMA 3.3 70B<br>
+        SEC EDGAR &nbsp;·&nbsp; LangGraph<br>
+        yfinance &nbsp;·&nbsp; Streamlit
+      </div>
+    </div>
+
+    <div>
+      <div style='font-size:0.68rem; color:#8b949e; text-transform:uppercase;
+                  letter-spacing:1.2px; margin-bottom:8px;'>Disclaimer</div>
+      <div style='font-size:0.74rem; color:#8b949e; line-height:1.7; max-width:200px;'>
+        For informational purposes only.<br>
+        Not investment advice. Past performance<br>
+        does not predict future results.
+      </div>
+    </div>
+
+  </div>
+  <div style='text-align:center; font-size:0.68rem; color:#8b949e; margin-top:24px;'>
+    © 2026 Analyst in a Box &nbsp;·&nbsp; Columbia University
+  </div>
+</div>
 """
 
 
@@ -490,82 +570,34 @@ def price_chart(hist, height: int = 180):
     return fig
 
 
-def forecast_projection_chart(hist, days_forward: int = 30, height: int = 300):
+def financials_mini_chart(name: str, vals: list, unit: str, height: int = 150):
     import plotly.graph_objects as go
-    import numpy as np
-    import pandas as pd
 
-    closes = hist["Close"].values
-    log_returns = np.diff(np.log(closes))
-    mu = log_returns.mean()
-    sigma = log_returns.std()
-    last_price = float(closes[-1])
-    last_date = hist.index[-1]
+    n = len(vals)
+    yr_labels = ["Y-2", "Y-1", "Y0"][-n:]
+    colors = ["#21262d"] * (n - 1) + ["#388bfd"]
+    trend_color = "#3fb950" if (len(vals) >= 2 and vals[-1] >= vals[-2]) else "#f85149"
 
-    future_dates = pd.bdate_range(start=last_date, periods=days_forward + 1)[1:]
-    t = np.arange(1, days_forward + 1)
-    mean_proj  = last_price * np.exp(mu * t)
-    upper_95   = last_price * np.exp(mu * t + 1.96 * sigma * np.sqrt(t))
-    lower_95   = last_price * np.exp(mu * t - 1.96 * sigma * np.sqrt(t))
-    upper_68   = last_price * np.exp(mu * t + sigma * np.sqrt(t))
-    lower_68   = last_price * np.exp(mu * t - sigma * np.sqrt(t))
-
-    fd = list(future_dates)
-    fig = go.Figure()
-
-    # Historical line
-    fig.add_trace(go.Scatter(
-        x=hist.index, y=hist["Close"], mode="lines", name="Historical",
-        line=dict(color="#388bfd", width=2),
-        hovertemplate="%{x|%b %d}<br><b>$%{y:.2f}</b><extra></extra>",
+    fig = go.Figure(go.Bar(
+        x=yr_labels,
+        y=vals,
+        marker=dict(color=colors, line=dict(width=0)),
+        text=[_fmt_metric(v, unit) for v in vals],
+        textposition="outside",
+        textfont=dict(color="#8b949e", size=9, family="Inter"),
+        hovertemplate=f"%{{x}}: %{{text}}<extra>{name}</extra>",
+        width=0.5,
     ))
-
-    # 95% CI band
-    fig.add_trace(go.Scatter(
-        x=fd + fd[::-1],
-        y=list(upper_95) + list(lower_95[::-1]),
-        fill="toself", fillcolor="rgba(56,139,253,0.07)",
-        line=dict(color="rgba(0,0,0,0)"), name="95% CI", showlegend=True,
-        hoverinfo="skip",
-    ))
-
-    # 68% CI band
-    fig.add_trace(go.Scatter(
-        x=fd + fd[::-1],
-        y=list(upper_68) + list(lower_68[::-1]),
-        fill="toself", fillcolor="rgba(56,139,253,0.15)",
-        line=dict(color="rgba(0,0,0,0)"), name="68% CI", showlegend=True,
-        hoverinfo="skip",
-    ))
-
-    # Mean projection
-    fig.add_trace(go.Scatter(
-        x=future_dates, y=mean_proj, mode="lines", name="Mean Projection",
-        line=dict(color="#388bfd", width=1.5, dash="dot"),
-        hovertemplate="%{x|%b %d}<br><b>$%{y:.2f}</b> (proj)<extra></extra>",
-    ))
-
-    # Today marker
-    fig.add_vline(x=last_date, line_width=1, line_color="#30363d")
-    fig.add_annotation(
-        x=last_date, y=last_price, text="Today",
-        showarrow=False, yshift=12,
-        font=dict(color="#8b949e", size=9, family="Inter"),
-    )
-
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=0, r=10, t=10, b=0), height=height,
-        xaxis=dict(showgrid=False, zeroline=False, showline=False,
-                   tickfont=dict(color="#484f58", size=9, family="Inter")),
-        yaxis=dict(showgrid=True, gridcolor="#161b22", zeroline=False, showline=False,
-                   tickfont=dict(color="#484f58", size=9, family="Inter"), tickprefix="$"),
-        legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#8b949e", size=10, family="Inter"),
-                    orientation="h", y=-0.12),
-        hoverlabel=dict(bgcolor="#161b22", bordercolor="#388bfd",
-                        font=dict(color="#f0f6fc", size=12, family="Inter")),
+        margin=dict(l=0, r=0, t=8, b=20),
+        height=height,
+        xaxis=dict(showgrid=False, tickfont=dict(color="#484f58", size=9, family="Inter")),
+        yaxis=dict(showgrid=True, gridcolor="#161b22", zeroline=False, visible=False),
+        showlegend=False,
+        hoverlabel=dict(bgcolor="#161b22", font=dict(color="#f0f6fc", size=11)),
     )
-    return fig
+    return fig, trend_color
 
 
 def sentiment_bar_chart(internal, external, transcript, height: int = 170):
@@ -591,6 +623,37 @@ def sentiment_bar_chart(internal, external, transcript, height: int = 170):
         xaxis=dict(range=[-1, 1], showgrid=True, gridcolor="#161b22",
                    zeroline=False, tickfont=dict(color="#484f58", size=9, family="Inter")),
         yaxis=dict(showgrid=False, tickfont=dict(color="#8b949e", size=10, family="Inter")),
+        showlegend=False,
+        hoverlabel=dict(bgcolor="#161b22", font=dict(color="#f0f6fc", size=11)),
+    )
+    return fig
+
+
+def earnings_bar_chart(series, label: str, prefix: str = "$", suffix: str = "", height: int = 230):
+    import plotly.graph_objects as go
+
+    s = series.sort_index()
+    dates = [d.strftime("%b '%y") for d in s.index]
+    values = [float(v) for v in s.values]
+    colors = ["#3fb950" if v >= 0 else "#f85149" for v in values]
+    texts = [f"{prefix}{v:.2f}{suffix}" if abs(v) < 100 else f"{prefix}{v:.1f}B" for v in values]
+
+    fig = go.Figure(go.Bar(
+        x=dates, y=values,
+        marker=dict(color=colors, line=dict(width=0)),
+        text=texts,
+        textposition="outside",
+        textfont=dict(color="#8b949e", size=9, family="Inter"),
+        hovertemplate=f"%{{x}}: {prefix}%{{y:.2f}}{suffix}<extra>{label}</extra>",
+        width=0.65,
+    ))
+    fig.add_hline(y=0, line_width=1, line_color="#30363d")
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=0, r=0, t=28, b=0),
+        height=height,
+        xaxis=dict(showgrid=False, tickfont=dict(color="#8b949e", size=9, family="Inter")),
+        yaxis=dict(showgrid=True, gridcolor="#161b22", zeroline=False, visible=False),
         showlegend=False,
         hoverlabel=dict(bgcolor="#161b22", font=dict(color="#f0f6fc", size=11)),
     )
@@ -784,6 +847,120 @@ def cached_market_data(ticker: str):
     return yf.Ticker(ticker).history(period="3mo")
 
 
+@st.cache_data(show_spinner=False, ttl=900)
+def cached_earnings_data(ticker: str) -> dict:
+    try:
+        t = yf.Ticker(ticker)
+        q = t.quarterly_income_stmt
+        if q is None or q.empty:
+            return {}
+        out = {}
+        if "Diluted EPS" in q.index:
+            out["eps"] = q.loc["Diluted EPS"].dropna().sort_index()
+        if "Total Revenue" in q.index:
+            out["revenue"] = q.loc["Total Revenue"].dropna().sort_index() / 1e9
+        if "Net Income" in q.index:
+            out["net_income"] = q.loc["Net Income"].dropna().sort_index() / 1e9
+        return out
+    except Exception:
+        return {}
+
+
+@st.cache_data(show_spinner=False, ttl=60)
+def cached_index_data() -> list[dict]:
+    symbols = [("^GSPC", "S&P 500"), ("^IXIC", "NASDAQ"), ("^DJI", "DOW"), ("^VIX", "VIX")]
+    out = []
+    for sym, label in symbols:
+        try:
+            fi = yf.Ticker(sym).fast_info
+            price = fi.last_price
+            prev  = fi.previous_close
+            if price and prev:
+                chg = ((price - prev) / prev) * 100
+                out.append({"label": label, "price": price, "chg": chg})
+        except Exception:
+            pass
+    return out
+
+
+def render_trading_bar(indices: list[dict]):
+    import streamlit.components.v1 as components
+
+    idx_parts = []
+    for item in indices:
+        color = "#3fb950" if item["chg"] >= 0 else "#f85149"
+        sign  = "+" if item["chg"] >= 0 else ""
+        # VIX shows no sign prefix
+        chg_str = f"{sign}{item['chg']:.2f}%" if item["label"] != "VIX" else f"{item['price']:.2f}"
+        price_str = f"{item['price']:,.2f}"
+        idx_parts.append(
+            f'<div class="seg">'
+            f'<span class="lbl">{item["label"]}</span>'
+            f'<span class="val" style="color:{color};">{price_str}</span>'
+            f'<span class="chg" style="color:{color};">{chg_str}</span>'
+            f'</div>'
+        )
+    idx_html = '<div class="pipe"></div>'.join(idx_parts)
+
+    html = f"""<!DOCTYPE html><html><head><style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{background:#0d1117;overflow:hidden;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
+.bar{{display:flex;align-items:center;height:44px;padding:0 24px;border-bottom:1px solid #21262d;}}
+.brand{{color:#f0f6fc;font-weight:700;letter-spacing:2px;font-size:0.72rem;white-space:nowrap;margin-right:20px;}}
+.pipe{{width:1px;height:16px;background:#21262d;margin:0 16px;flex-shrink:0;}}
+.seg{{display:flex;align-items:center;gap:6px;white-space:nowrap;}}
+.lbl{{color:#484f58;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.8px;}}
+.val{{font-weight:600;font-size:0.78rem;font-variant-numeric:tabular-nums;}}
+.chg{{font-size:0.68rem;}}
+.spacer{{flex:1;}}
+.mkt{{display:flex;align-items:center;gap:7px;font-size:0.68rem;color:#8b949e;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}}
+.dot{{width:6px;height:6px;border-radius:50%;flex-shrink:0;}}
+.dot-open{{background:#3fb950;animation:pulse 2s ease-in-out infinite;}}
+.dot-closed{{background:#484f58;}}
+.dot-pre{{background:#e3b341;animation:pulse 2s ease-in-out infinite;}}
+.clock-wrap{{display:flex;flex-direction:column;align-items:flex-end;margin-left:18px;}}
+.clock{{color:#c9d1d9;font-size:0.82rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.5px;white-space:nowrap;}}
+.date{{color:#484f58;font-size:0.65rem;letter-spacing:0.5px;margin-top:1px;white-space:nowrap;}}
+@keyframes pulse{{0%,100%{{opacity:1;}}50%{{opacity:0.25;}}}}
+</style></head><body>
+<div class="bar">
+  <span class="brand">ANALYST IN A BOX</span>
+  <div class="pipe"></div>
+  {idx_html}
+  <div class="spacer"></div>
+  <div class="mkt"><div class="dot" id="dot"></div><span id="mkt-lbl"></span></div>
+  <div class="pipe"></div>
+  <div class="clock-wrap">
+    <div class="clock" id="clk"></div>
+    <div class="date" id="dte"></div>
+  </div>
+</div>
+<script>
+function mktStatus(){{
+  var et=new Date(new Date().toLocaleString('en-US',{{timeZone:'America/New_York'}}));
+  var day=et.getDay(),mins=et.getHours()*60+et.getMinutes();
+  if(day===0||day===6)return['CLOSED','dot-closed'];
+  if(mins>=570&&mins<960)return['NYSE OPEN','dot-open'];
+  if(mins>=240&&mins<570)return['PRE-MARKET','dot-pre'];
+  if(mins>=960&&mins<1200)return['AFTER HOURS','dot-closed'];
+  return['CLOSED','dot-closed'];
+}}
+function tick(){{
+  var now=new Date();
+  var t=now.toLocaleTimeString('en-US',{{timeZone:'America/New_York',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}});
+  var d=now.toLocaleDateString('en-US',{{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',year:'numeric'}});
+  document.getElementById('clk').textContent=t+' ET';
+  document.getElementById('dte').textContent=d;
+  var s=mktStatus();
+  document.getElementById('mkt-lbl').textContent=s[0];
+  document.getElementById('dot').className='dot '+s[1];
+}}
+tick();setInterval(tick,1000);
+</script></body></html>"""
+
+    components.html(html, height=44, scrolling=False)
+
+
 # ==========================================
 # SESSION STATE
 # ==========================================
@@ -793,10 +970,15 @@ for _k, _v in [("has_run", False), ("current_ticker", "")]:
 
 
 # ==========================================
+# TRADING BAR (always visible)
+# ==========================================
+render_trading_bar(cached_index_data())
+
+# ==========================================
 # HOME SCREEN
 # ==========================================
 if not st.session_state.has_run:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
@@ -808,7 +990,7 @@ if not st.session_state.has_run:
             "Analyst in a Box</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
-            "<p style='text-align:center; font-size:0.75rem; color:#30363d; text-transform:uppercase;"
+            "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
             " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · Quant Finance · NLP</p>",
             unsafe_allow_html=True,
         )
@@ -833,30 +1015,25 @@ if not st.session_state.has_run:
         st.markdown(_section_label("What's inside every report"), unsafe_allow_html=True)
         f1, f2, f3, f4 = st.columns(4, gap="medium")
         features = [
-            ("📄", "SEC 10-K Analysis",
+            ("SEC 10-K Analysis",
              "Management Discussion & Analysis parsed directly from the latest EDGAR annual filing."),
-            ("📰", "News Sentiment",
+            ("News Sentiment",
              "Real-time financial news scored by FinBERT, a domain-specific NLP model."),
-            ("🎙️", "Earnings Call NLP",
+            ("Earnings Call NLP",
              "Executive tone and forward guidance extracted from the most recent earnings transcript."),
-            ("🧠", "LLM Synthesis",
+            ("LLM Synthesis",
              "LLaMA 3.3 70B synthesizes quant data, sentiment, and fundamentals into a forecast."),
         ]
-        for col, (icon, title, desc) in zip([f1, f2, f3, f4], features):
+        for col, (title, desc) in zip([f1, f2, f3, f4], features):
             with col:
                 st.markdown(f"""
                 <div class="feature-card">
-                    <div class="feature-icon">{icon}</div>
                     <div class="feature-title">{title}</div>
                     <div class="feature-desc">{desc}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <p style='text-align:center; font-size:0.72rem; color:#21262d; margin-top:36px;'>
-        Powered by FinBERT · LLaMA 3.3 70B · SEC EDGAR · LangGraph · yfinance
-    </p>
-    """, unsafe_allow_html=True)
+    st.html(FOOTER_HTML)
 
 
 # ==========================================
@@ -868,13 +1045,6 @@ else:
     # ── Nav ──
     _, nav, _ = st.columns([1, 2, 1])
     with nav:
-        st.markdown(
-            f"<div style='display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:6px;'>"
-            f"{LOGO_SVG_SMALL}"
-            f"<span style='font-size:0.88rem; font-weight:600; color:#f0f6fc;'>Analyst in a Box</span>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
         sc, bc = st.columns([5, 1])
         with sc:
             new_ticker = st.text_input(
@@ -887,18 +1057,41 @@ else:
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # ── Validate ticker ──
+    # ── Validate ticker — equities and ETFs only ──
     try:
         fast = yf.Ticker(ticker).fast_info
         if not getattr(fast, "last_price", None):
-            st.error(f"**{ticker}** — no market data found. Check the ticker and try again.")
+            st.error(f"**{ticker}** — no market data found. Please enter a valid stock ticker.")
+            st.stop()
+        quote_type = getattr(fast, "quote_type", "").upper()
+        ALLOWED = {"EQUITY"}
+        TYPE_LABELS = {
+            "ETF":            "ETF",
+            "CRYPTOCURRENCY": "cryptocurrency",
+            "MUTUALFUND":     "mutual fund",
+            "INDEX":          "market index",
+            "FUTURE":         "futures contract",
+            "CURRENCY":       "currency pair",
+            "OPTION":         "options contract",
+        }
+        if quote_type and quote_type not in ALLOWED:
+            label = TYPE_LABELS.get(quote_type, quote_type.lower())
+            st.error(
+                f"**{ticker}** is a {label}, not an equity. "
+                f"This tool supports stocks and ETFs only. "
+                f"Please enter a valid equity ticker (e.g. AAPL, MSFT, NVDA)."
+            )
             st.stop()
     except Exception:
         st.warning("Could not validate ticker — proceeding anyway.")
 
     # ── Run or load ──
     cache_key = f"result_{ticker}"
-    if cache_key not in st.session_state:
+    if DEMO_MODE:
+        from fixtures import DEMO_RESULT
+        result = DEMO_RESULT
+        st.info("**Demo mode** — showing fixture data. Unset `DEMO_MODE` in `.env` to run the real pipeline.")
+    elif cache_key not in st.session_state:
         result = run_with_status(ticker)
         st.session_state[cache_key] = result
     else:
@@ -958,246 +1151,268 @@ else:
     headlines = result.get("news_headlines", [])
     valid_headlines = headlines if (headlines and headlines != ["News fetch failed."]) else []
 
-    # ── TABS ──
-    tab_overview, tab_forecast, tab_financials, tab_sentiment, tab_export = st.tabs([
-        "📊  Overview",
-        "📈  Forecast",
-        "💰  Financials",
-        "🔬  Sentiment & News",
-        "⬇  Export",
-    ])
+    # ═══════════════════════════════════════
+    # SECTION 1 — OVERVIEW
+    # ═══════════════════════════════════════
+    label, color, bg = _verdict(result)
 
-    # ── TAB 1: Overview ──
-    with tab_overview:
-        # KPI row
-        if metrics:
-            kpi_keys = ["Revenue", "EPS (Diluted)", "Operating Margin", "Free Cash Flow"]
-            kpi_cols = st.columns(len(kpi_keys), gap="small")
-            for col, key in zip(kpi_cols, kpi_keys):
-                if key in metrics:
-                    m = metrics[key]
-                    vals, unit = m["values"], m["unit"]
-                    val_str = _fmt_metric(vals[-1], unit)
-                    trend_str, trend_dir = _trend_pct(vals)
-                    with col:
-                        st.markdown(kpi_card(key, val_str, trend_str, trend_dir), unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        ov_left, ov_right = st.columns([1, 1], gap="large")
-
-        with ov_left:
-            st.markdown(_section_label("NLP Sentiment"), unsafe_allow_html=True)
-            render_sentiment_card("Internal — SEC 10-K",  result.get("internal_sentiment"))
-            render_sentiment_card("External — News",       result.get("external_sentiment"))
-            render_sentiment_card("Executive — Earnings",  result.get("transcript_sentiment"))
-
-        with ov_right:
-            st.markdown(_section_label("Price — 3 Months"), unsafe_allow_html=True)
-            if hist is not None and not hist.empty:
-                st.plotly_chart(price_chart(hist, height=180), use_container_width=True,
-                                config={"displayModeBar": False})
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(_section_label("Forecast (Step 4 Summary)"), unsafe_allow_html=True)
-            report = result.get("final_report", "")
-            steps = re.split(r"(\*{0,2}STEP \d+:[^\n]*\*{0,2})", report)
-            summary = ""
-            for i, part in enumerate(steps):
-                if re.match(r"\*{0,2}STEP 4:", part.strip()) and i + 1 < len(steps):
-                    summary = steps[i + 1].strip()
-                    break
-            st.markdown(
-                f"<div style='color:#8b949e; font-size:0.88rem; line-height:1.85;'>{summary or report[:600]}</div>",
-                unsafe_allow_html=True,
-            )
-
-    # ── TAB 2: Forecast ──
-    with tab_forecast:
-        label, color, bg = _verdict(result)
-
-        # Verdict banner
-        st.markdown(f"""
-        <div style='background:{bg}; border:1px solid {color}40; border-radius:10px;
-                    padding:20px 28px; margin-bottom:24px;
-                    display:flex; align-items:center; gap:20px;'>
-            <div style='font-size:1.6rem; font-weight:800; color:{color};
-                        letter-spacing:2px;'>{label}</div>
-            <div style='width:1px; height:40px; background:{color}30;'></div>
-            <div>
-                <div style='font-size:0.72rem; color:#8b949e; text-transform:uppercase;
-                            letter-spacing:1px; margin-bottom:4px;'>Composite Sentiment Signal</div>
-                <div style='font-size:0.88rem; color:#c9d1d9;'>
-                    Based on SEC 10-K, financial news, and earnings call NLP analysis
-                </div>
+    st.markdown(f"""
+    <div style='background:{bg}; border:1px solid {color}40; border-radius:10px;
+                padding:20px 28px; margin-bottom:24px;
+                display:flex; align-items:center; gap:20px;'>
+        <div style='font-size:1.6rem; font-weight:800; color:{color};
+                    letter-spacing:2px;'>{label}</div>
+        <div style='width:1px; height:40px; background:{color}30;'></div>
+        <div>
+            <div style='font-size:0.72rem; color:#8b949e; text-transform:uppercase;
+                        letter-spacing:1px; margin-bottom:4px;'>Composite Sentiment Signal</div>
+            <div style='font-size:0.88rem; color:#c9d1d9;'>
+                Based on SEC 10-K, financial news, and earnings call NLP analysis
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Charts row
-        fc_left, fc_right = st.columns([1, 1.6], gap="large")
-
-        with fc_left:
-            st.markdown(_section_label("Sentiment Alignment"), unsafe_allow_html=True)
-            try:
-                st.plotly_chart(
-                    sentiment_bar_chart(
-                        result.get("internal_sentiment"),
-                        result.get("external_sentiment"),
-                        result.get("transcript_sentiment"),
-                    ),
-                    use_container_width=True,
-                    config={"displayModeBar": False},
-                )
-            except Exception:
-                render_sentiment_card("Internal", result.get("internal_sentiment"))
-                render_sentiment_card("External", result.get("external_sentiment"))
-                render_sentiment_card("Executive", result.get("transcript_sentiment"))
-
-        with fc_right:
-            st.markdown(_section_label("Price History + 30-Day Projection (95% & 68% CI)"), unsafe_allow_html=True)
-            if hist is not None and not hist.empty:
-                try:
-                    st.plotly_chart(
-                        forecast_projection_chart(hist, days_forward=30, height=280),
-                        use_container_width=True,
-                        config={"displayModeBar": False},
-                    )
-                    st.markdown(
-                        "<div style='font-size:0.72rem; color:#484f58; text-align:right;'>"
-                        "Projection based on historical log-normal returns. Not financial advice.</div>",
-                        unsafe_allow_html=True,
-                    )
-                except Exception as e:
-                    st.warning(f"Chart unavailable: {e}")
-            else:
-                st.info("No price data available.")
-
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown(_section_label("Full LLM Report"), unsafe_allow_html=True)
-        render_report(result.get("final_report", "No report available."))
-
-    # ── TAB 3: Financials ──
-    with tab_financials:
-        if metrics:
-            st.markdown(_section_label("Key Metrics — 3-Year Trend"), unsafe_allow_html=True)
-            m_cols = st.columns(len(metrics), gap="small")
-            for col, (name, m) in zip(m_cols, metrics.items()):
+    if metrics:
+        kpi_keys = ["Revenue", "EPS (Diluted)", "Free Cash Flow"]
+        kpi_cols = st.columns(len(kpi_keys), gap="small")
+        for col, key in zip(kpi_cols, kpi_keys):
+            if key in metrics:
+                m = metrics[key]
                 vals, unit = m["values"], m["unit"]
                 val_str = _fmt_metric(vals[-1], unit)
                 trend_str, trend_dir = _trend_pct(vals)
                 with col:
-                    st.markdown(kpi_card(name, val_str, trend_str, trend_dir), unsafe_allow_html=True)
+                    st.markdown(kpi_card(key, val_str, trend_str, trend_dir), unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    ov_left, ov_right = st.columns([1, 1.4], gap="large")
+
+    with ov_left:
+        st.markdown(_section_label("Sentiment Alignment"), unsafe_allow_html=True)
+        try:
+            st.plotly_chart(
+                sentiment_bar_chart(
+                    result.get("internal_sentiment"),
+                    result.get("external_sentiment"),
+                    result.get("transcript_sentiment"),
+                ),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+        except Exception:
+            pass
+        render_sentiment_card("Internal — SEC 10-K",  result.get("internal_sentiment"))
+        render_sentiment_card("External — News",       result.get("external_sentiment"))
+        render_sentiment_card("Executive — Earnings",  result.get("transcript_sentiment"))
+
+    with ov_right:
+        st.markdown(_section_label("Price — 3 Months"), unsafe_allow_html=True)
+        if hist is not None and not hist.empty:
+            st.plotly_chart(price_chart(hist, height=160), use_container_width=True,
+                            config={"displayModeBar": False})
+
+        if metrics:
             st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(_section_label("Key Financials — 3-Year Trend"), unsafe_allow_html=True)
+            fin_keys = ["Revenue", "EPS (Diluted)", "Operating Margin", "Free Cash Flow"]
+            available = [(k, metrics[k]) for k in fin_keys if k in metrics]
+            if available:
+                row1 = available[:2]
+                row2 = available[2:]
+                for row in (row1, row2):
+                    if not row:
+                        continue
+                    fcols = st.columns(len(row), gap="medium")
+                    for fcol, (name, m) in zip(fcols, row):
+                        with fcol:
+                            st.markdown(
+                                f"<div style='font-size:0.72rem; color:#8b949e; "
+                                f"text-transform:uppercase; letter-spacing:1px; "
+                                f"margin-bottom:4px;'>{name}</div>",
+                                unsafe_allow_html=True,
+                            )
+                            try:
+                                fig, _ = financials_mini_chart(name, m["values"], m["unit"], height=130)
+                                st.plotly_chart(fig, use_container_width=True,
+                                                config={"displayModeBar": False})
+                            except Exception:
+                                pass
 
-        diag = result.get("financial_diagnostic", "")
-        if diag:
-            st.markdown(_section_label("4-Step Quantitative Diagnostic (LLM)"), unsafe_allow_html=True)
-            render_report(diag)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(_section_label("Full LLM Report"), unsafe_allow_html=True)
+    render_report(result.get("final_report", "No report available."))
 
-        raw = result.get("financial_data", "")
-        if raw:
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Raw Financial Data — Income Statement · Balance Sheet · Cash Flow", expanded=False):
-                st.code(raw, language=None)
+    # ═══════════════════════════════════════
+    # SECTION 2 — FINANCIALS
+    # ═══════════════════════════════════════
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(_section_label("Financials"), unsafe_allow_html=True)
 
-    # ── TAB 4: Sentiment & News ──
-    with tab_sentiment:
-        g1, g2, g3 = st.columns(3, gap="medium")
-        gauges = [
-            (result.get("internal_sentiment"),  "Internal Sentiment<br>SEC 10-K MD&A"),
-            (result.get("external_sentiment"),   "External Sentiment<br>Financial News"),
-            (result.get("transcript_sentiment"), "Executive Sentiment<br>Earnings Call"),
-        ]
-        for col, (score, title) in zip([g1, g2, g3], gauges):
+    if metrics:
+        m_cols = st.columns(len(metrics), gap="small")
+        for col, (name, m) in zip(m_cols, metrics.items()):
+            vals, unit = m["values"], m["unit"]
+            val_str = _fmt_metric(vals[-1], unit)
+            trend_str, trend_dir = _trend_pct(vals)
             with col:
-                try:
-                    st.plotly_chart(
-                        sentiment_gauge(score, title),
-                        use_container_width=True,
-                        config={"displayModeBar": False},
-                    )
-                except Exception:
-                    render_sentiment_card(title.replace("<br>", " — "), score)
+                st.markdown(kpi_card(name, val_str, trend_str, trend_dir), unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown("<hr>", unsafe_allow_html=True)
-        n_left, n_right = st.columns([1, 1], gap="large")
+    earnings_data = cached_earnings_data(ticker)
+    if earnings_data:
+        st.markdown(_section_label("Quarterly Earnings History"), unsafe_allow_html=True)
+        e_cols = []
+        e_items = []
+        if "eps" in earnings_data:
+            e_items.append(("Diluted EPS", earnings_data["eps"], "$", ""))
+        if "revenue" in earnings_data:
+            e_items.append(("Revenue", earnings_data["revenue"], "$", "B"))
+        if "net_income" in earnings_data:
+            e_items.append(("Net Income", earnings_data["net_income"], "$", "B"))
 
-        with n_left:
-            st.markdown(_section_label("Score Interpretation"), unsafe_allow_html=True)
-            st.markdown("""
-            <div style='font-size:0.85rem; color:#8b949e; line-height:2.2;'>
-                <span style='color:#3fb950; font-weight:600;'>+0.10 to +1.00</span> &nbsp; Positive signal<br>
-                <span style='color:#8b949e; font-weight:600;'>-0.10 to +0.10</span> &nbsp; Neutral / mixed<br>
-                <span style='color:#f85149; font-weight:600;'>-1.00 to -0.10</span> &nbsp; Negative signal<br><br>
-                Scored by <strong style='color:#c9d1d9;'>FinBERT</strong>, a BERT model
-                fine-tuned on financial text from Reuters, earnings releases, and analyst reports.
-            </div>
-            """, unsafe_allow_html=True)
-
-        with n_right:
-            st.markdown(_section_label("News Headlines"), unsafe_allow_html=True)
-            if valid_headlines:
-                for h in valid_headlines:
+        if e_items:
+            e_cols = st.columns(len(e_items), gap="large")
+            for col, (name, series, prefix, suffix) in zip(e_cols, e_items):
+                with col:
                     st.markdown(
-                        f"<div style='font-size:0.84rem; color:#8b949e; padding:10px 0; "
-                        f"border-bottom:1px solid #21262d; line-height:1.5;'>{h}</div>",
+                        f"<div style='font-size:0.72rem; color:#8b949e; text-transform:uppercase; "
+                        f"letter-spacing:1px; margin-bottom:4px;'>{name}</div>",
                         unsafe_allow_html=True,
                     )
-            else:
-                st.markdown(
-                    "<span style='color:#30363d; font-size:0.85rem;'>No headlines available.</span>",
-                    unsafe_allow_html=True,
-                )
+                    try:
+                        st.plotly_chart(
+                            earnings_bar_chart(series, name, prefix, suffix),
+                            use_container_width=True,
+                            config={"displayModeBar": False},
+                        )
+                    except Exception:
+                        pass
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        transcript = result.get("transcript_text", "")
-        if transcript and transcript not in ("Transcript unavailable.", "Transcript fetch failed.", ""):
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(_section_label("Earnings Call Transcript (excerpt)"), unsafe_allow_html=True)
-            with st.expander("Show full excerpt", expanded=False):
-                st.markdown(
-                    f"<div style='font-size:0.82rem; color:#8b949e; line-height:1.8;'>{transcript[:4000]}…</div>",
-                    unsafe_allow_html=True,
-                )
+    diag = result.get("financial_diagnostic", "")
+    if diag:
+        st.markdown(_section_label("4-Step Quantitative Diagnostic (LLM)"), unsafe_allow_html=True)
+        render_report(diag)
 
-    # ── TAB 5: Export ──
-    with tab_export:
-        _, ex_col, _ = st.columns([1, 1, 1])
-        with ex_col:
-            st.markdown(_section_label("Download Report"), unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
+    raw = result.get("financial_data", "")
+    if raw:
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("Raw Financial Data — Income Statement · Balance Sheet · Cash Flow", expanded=False):
+            st.code(raw, language=None)
 
+    # ═══════════════════════════════════════
+    # SECTION 3 — SENTIMENT & NEWS
+    # ═══════════════════════════════════════
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(_section_label("Sentiment & News"), unsafe_allow_html=True)
+
+    g1, g2, g3 = st.columns(3, gap="medium")
+    gauges = [
+        (result.get("internal_sentiment"),  "Internal Sentiment<br>SEC 10-K MD&A"),
+        (result.get("external_sentiment"),   "External Sentiment<br>Financial News"),
+        (result.get("transcript_sentiment"), "Executive Sentiment<br>Earnings Call"),
+    ]
+    for col, (score, gtitle) in zip([g1, g2, g3], gauges):
+        with col:
             try:
-                pdf_bytes = build_pdf(ticker, result, current_price)
-                st.download_button(
-                    label="⬇  Download PDF Report",
-                    data=pdf_bytes,
-                    file_name=f"analyst_in_a_box_{ticker}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    mime="application/pdf",
+                st.plotly_chart(
+                    sentiment_gauge(score, gtitle),
+                    use_container_width=True,
+                    config={"displayModeBar": False},
                 )
-            except ImportError:
-                st.warning("Install `fpdf2` to enable PDF export:  `pip install fpdf2`")
-            except Exception as e:
-                st.error(f"PDF generation failed: {e}")
+            except Exception:
+                render_sentiment_card(gtitle.replace("<br>", " — "), score)
 
-            safe_result = {
-                k: v for k, v in result.items()
-                if isinstance(v, (str, int, float, list, dict, type(None)))
-            }
-            st.download_button(
-                label="⬇  Download JSON (raw data)",
-                data=json.dumps(safe_result, indent=2),
-                file_name=f"analyst_in_a_box_{ticker}_{datetime.now().strftime('%Y%m%d')}.json",
-                mime="application/json",
+    st.markdown("<hr>", unsafe_allow_html=True)
+    n_left, n_right = st.columns([1, 1], gap="large")
+
+    with n_left:
+        st.markdown(_section_label("Score Interpretation"), unsafe_allow_html=True)
+        st.markdown("""
+        <div style='font-size:0.85rem; color:#8b949e; line-height:2.2;'>
+            <span style='color:#3fb950; font-weight:600;'>+0.10 to +1.00</span> &nbsp; Positive signal<br>
+            <span style='color:#8b949e; font-weight:600;'>-0.10 to +0.10</span> &nbsp; Neutral / mixed<br>
+            <span style='color:#f85149; font-weight:600;'>-1.00 to -0.10</span> &nbsp; Negative signal<br><br>
+            Scored by <strong style='color:#c9d1d9;'>FinBERT</strong>, a BERT model
+            fine-tuned on financial text from Reuters, earnings releases, and analyst reports.
+        </div>
+        """, unsafe_allow_html=True)
+
+    with n_right:
+        st.markdown(_section_label("News Headlines"), unsafe_allow_html=True)
+        if valid_headlines:
+            for h in valid_headlines:
+                htitle, _, body = h.partition(" - ")
+                htitle = htitle.strip()
+                snippet = body.strip()[:160] + "…" if len(body.strip()) > 160 else body.strip()
+                st.markdown(
+                    f"<div style='padding:10px 0; border-bottom:1px solid #21262d;'>"
+                    f"<div style='font-size:0.85rem; font-weight:500; color:#c9d1d9; line-height:1.4; margin-bottom:3px;'>{htitle}</div>"
+                    f"<div style='font-size:0.77rem; color:#8b949e; line-height:1.5;'>{snippet}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                "<span style='color:#8b949e; font-size:0.85rem;'>No headlines available.</span>",
+                unsafe_allow_html=True,
             )
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(f"""
-            <div style='background:#161b22; border:1px solid #21262d; border-radius:8px;
-                        padding:16px 18px; font-size:0.82rem; color:#8b949e; line-height:1.8;'>
-                <strong style='color:#c9d1d9;'>Report Details</strong><br>
-                Ticker: <span style='color:#f0f6fc;'>{ticker}</span><br>
-                Generated: <span style='color:#f0f6fc;'>{datetime.now().strftime("%B %d, %Y at %H:%M")}</span><br>
-                Sources: SEC EDGAR 10-K, Financial News, Earnings Transcript<br>
-                Models: FinBERT (sentiment) · LLaMA 3.3 70B (synthesis)
-            </div>
-            """, unsafe_allow_html=True)
+    transcript = result.get("transcript_text", "")
+    if transcript and transcript not in ("Transcript unavailable.", "Transcript fetch failed.", ""):
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(_section_label("Earnings Call Transcript (excerpt)"), unsafe_allow_html=True)
+        with st.expander("Show full excerpt", expanded=False):
+            st.markdown(
+                f"<div style='font-size:0.82rem; color:#8b949e; line-height:1.8;'>{transcript[:4000]}…</div>",
+                unsafe_allow_html=True,
+            )
+
+    # ═══════════════════════════════════════
+    # SECTION 4 — EXPORT
+    # ═══════════════════════════════════════
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(_section_label("Export"), unsafe_allow_html=True)
+
+    _, ex_col, _ = st.columns([1, 1, 1])
+    with ex_col:
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        try:
+            pdf_bytes = build_pdf(ticker, result, current_price)
+            st.download_button(
+                label="Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"analyst_in_a_box_{ticker}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+            )
+        except ImportError:
+            st.warning("Install `fpdf2` to enable PDF export:  `pip install fpdf2`")
+        except Exception as e:
+            st.error(f"PDF generation failed: {e}")
+
+        safe_result = {
+            k: v for k, v in result.items()
+            if isinstance(v, (str, int, float, list, dict, type(None)))
+        }
+        st.download_button(
+            label="Download JSON (raw data)",
+            data=json.dumps(safe_result, indent=2),
+            file_name=f"analyst_in_a_box_{ticker}_{datetime.now().strftime('%Y%m%d')}.json",
+            mime="application/json",
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='background:#161b22; border:1px solid #21262d; border-radius:8px;
+                    padding:16px 18px; font-size:0.82rem; color:#8b949e; line-height:1.8;'>
+            <strong style='color:#c9d1d9;'>Report Details</strong><br>
+            Ticker: <span style='color:#f0f6fc;'>{ticker}</span><br>
+            Generated: <span style='color:#f0f6fc;'>{datetime.now().strftime("%B %d, %Y at %H:%M")}</span><br>
+            Sources: SEC EDGAR 10-K, Financial News, Earnings Transcript<br>
+            Models: FinBERT (sentiment) · LLaMA 3.3 70B (synthesis)
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.html(FOOTER_HTML)
