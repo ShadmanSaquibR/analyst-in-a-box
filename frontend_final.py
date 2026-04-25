@@ -49,11 +49,7 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
 .stTextInput input::placeholder {
     font-style: italic !important;
 }
-.stTextInput input:focus {
-    border-color: #3fb950 !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
+
 /* Buttons (Updated to Hollow/Ghost Green style) */
 .stButton button {
     background-color: transparent !important;
