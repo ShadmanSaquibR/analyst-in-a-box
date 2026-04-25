@@ -984,7 +984,7 @@ if not st.session_state.has_run:
             "<h1 style='text-align:center; font-weight:0.01;letter-spacing:3px;font-size:1.5rem; color:#f0f6fc; border:2px solid #f0f6fc; padding:12px 32px; width:max-content; margin:0 auto 12px auto;'>"
             "ANALYST IN A BOX</h1>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
-            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
+            " letter-spacing:3px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
             unsafe_allow_html=True,
         )
         s_col, b_col = st.columns([5, 1])
