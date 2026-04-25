@@ -12,3 +12,5 @@ edgartools
 python-dotenv
 defeatbeta-api
 pandas
+plotly
+fpdf2
