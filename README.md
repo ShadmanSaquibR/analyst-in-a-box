@@ -38,7 +38,7 @@ graph TD;
 	classDef last fill:#bfb6fc
 ```
 
-After `fetch_data` completes, the two analysis nodes run in parallel before converging at `synthesis`.
+After `fetch_data` completes, the pipeline branches into two parallel analysis nodes: `financial_diagnostic` (for quantitative analysis) and `sentiment_node` (which uses a high-speed batching technique to score news, SEC filings, and transcripts simultaneously). These two nodes then converge at `synthesis`.
 
 ### Node Breakdown
 
@@ -46,9 +46,7 @@ After `fetch_data` completes, the two analysis nodes run in parallel before conv
 |---|---|
 | `fetch_data` | Pulls yfinance financials, DuckDuckGo news, SEC 10-K MD&A via edgartools, and earnings call transcripts via Defeat-Beta API |
 | `financial_diagnostic` | Runs a 4-step Chain-of-Thought quantitative analysis on 3-4 years of income, balance sheet, and cash flow data using Groq LLaMA 3.3 70B |
-| `external_sentiment` | Scores market news headlines with FinBERT (-1 to 1) |
-| `internal_sentiment` | Chunks and scores SEC MD&A text with FinBERT (-1 to 1) |
-| `transcript_sentiment` | Chunks and scores earnings call transcript with FinBERT (-1 to 1) |
+| `sentiment_node` | Consolidates and batches text from market news, SEC MD&A, and earnings transcripts, feeding them to FinBERT in a single pass to calculate individual 		  external, internal, and transcript sentiment scores (-1 to 1).
 | `synthesis` | Synthesizes the diagnostic + sentiment scores into a final enterprise forecast using Groq LLaMA 3.3 70B |
 
 ---
