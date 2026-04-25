@@ -981,7 +981,7 @@ if not st.session_state.has_run:
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
-            "<h1 style='text-align:center; font-weight:400; font-size:2.2rem; color:#f0f6fc;'>"
+            "<h1 style='text-align:center; font-weight:100; font-size:2.8rem; color:#f0f6fc;'>"
             "ANALYST IN A BOX</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
