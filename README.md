@@ -24,8 +24,8 @@ graph TD;
 	synthesis(synthesis)
 	__end__([END]):::last
 	__start__ --> fetch_data;
-	fetch_data --> external_sentiment;
 	fetch_data --> financial_diagnostic;
+	fetch_data --> external_sentiment;
 	fetch_data --> internal_sentiment;
 	fetch_data --> transcript_sentiment;
 	external_sentiment --> synthesis;
