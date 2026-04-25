@@ -18,20 +18,14 @@ graph TD;
 	__start__([START]):::first
 	fetch_data(fetch_data)
 	financial_diagnostic(financial_diagnostic)
-	external_sentiment(external_sentiment)
-	internal_sentiment(internal_sentiment)
-	transcript_sentiment(transcript_sentiment)
+	sentiment_node(sentiment_node)
 	synthesis(synthesis)
 	__end__([END]):::last
 	__start__ --> fetch_data;
 	fetch_data --> financial_diagnostic;
-	fetch_data --> external_sentiment;
-	fetch_data --> internal_sentiment;
-	fetch_data --> transcript_sentiment;
-	external_sentiment --> synthesis;
+	fetch_data --> sentiment_node;
 	financial_diagnostic --> synthesis;
-	internal_sentiment --> synthesis;
-	transcript_sentiment --> synthesis;
+	sentiment_node --> synthesis;
 	synthesis --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
