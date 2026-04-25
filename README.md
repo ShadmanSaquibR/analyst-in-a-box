@@ -73,6 +73,7 @@ Set your API keys in a `.env` file:
 
 ```
 GROQ_API_KEY=your_key_here
+EDGAR_EMAIL=your_email@example.com
 ```
 
 ---
