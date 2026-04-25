@@ -992,12 +992,12 @@ if not st.session_state.has_run:
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
-            "<h1 style='text-align:center; font-weight:700; font-size:2.8rem; margin-bottom:6px; letter-spacing:-1px;'>"
+            "<h1 style='text-align:center; font-family:\"Inter\", sans-serif; font-weight:700; font-size:3.2rem; color:#f0f6fc; margin-bottom:6px; letter-spacing:-1px;'>"
             "Analyst in a Box</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
-            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · Quant Finance · NLP</p>",
+            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
             unsafe_allow_html=True,
         )
         s_col, b_col = st.columns([5, 1])
