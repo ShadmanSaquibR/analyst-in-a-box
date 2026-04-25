@@ -12,6 +12,24 @@ import streamlit as st
 import yfinance as yf
 
 DEMO_MODE = os.getenv("DEMO_MODE", "0") == "1"
+# ==========================================
+# ASSETS 
+# ==========================================
+_LOGO_PATHS = """
+  <rect x="2" y="2" width="60" height="60" rx="11" fill="#161b22" stroke="#388bfd" stroke-width="2"/>
+  <line x1="8" y1="43" x2="56" y2="43" stroke="#21262d" stroke-width="1"/>
+  <circle cx="32" cy="19" r="8" stroke="#58a6ff" stroke-width="1.8" fill="none"/>
+  <path d="M13 42 Q13 31 32 31 Q51 31 51 42"
+        stroke="#58a6ff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <polyline points="10,58 20,54 30,56 41,50 54,46"
+            stroke="#3fb950" stroke-width="1.7" fill="none"
+            stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="54" cy="46" r="2.2" fill="#3fb950"/>
+"""
+LOGO_SVG = f'<svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
+LOGO_SVG_SMALL = f'<svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
+
+# ==========================================
 
 # ==========================================
 # PAGE CONFIG
@@ -484,23 +502,6 @@ def _section_label(text: str) -> str:
         f"<div style='font-size:0.7rem; color:#8b949e; letter-spacing:1.5px; "
         f"text-transform:uppercase; margin-bottom:12px;'>{text}</div>"
     )
-
-
-# Logo: analyst silhouette (head + shoulders) inside a box, with a rising chart line
-_LOGO_PATHS = """
-  <rect x="2" y="2" width="60" height="60" rx="11" fill="#161b22" stroke="#388bfd" stroke-width="2"/>
-  <line x1="8" y1="43" x2="56" y2="43" stroke="#21262d" stroke-width="1"/>
-  <circle cx="32" cy="19" r="8" stroke="#58a6ff" stroke-width="1.8" fill="none"/>
-  <path d="M13 42 Q13 31 32 31 Q51 31 51 42"
-        stroke="#58a6ff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <polyline points="10,58 20,54 30,56 41,50 54,46"
-            stroke="#3fb950" stroke-width="1.7" fill="none"
-            stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="54" cy="46" r="2.2" fill="#3fb950"/>
-"""
-
-LOGO_SVG = f'<svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
-LOGO_SVG_SMALL = f'<svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
 
 FOOTER_HTML = """
 <div style='border-top:1px solid #21262d; margin-top:56px; padding-top:32px; padding-bottom:28px;'>
@@ -1014,7 +1015,7 @@ if not st.session_state.has_run:
             f"<div style='text-align:center; margin-bottom:14px;'>{LOGO_SVG}</div>",
             unsafe_allow_html=True,
         )
-
+        
         st.markdown(
             "<h1 class='brand-title' style='text-align:center; font-size:3.5rem; margin-bottom:6px;'>"
             "Analyst in a Box</h1>"
@@ -1024,6 +1025,7 @@ if not st.session_state.has_run:
             " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
             unsafe_allow_html=True,
         )
+        
 
         s_col, b_col = st.columns([5, 1])
         with s_col:
