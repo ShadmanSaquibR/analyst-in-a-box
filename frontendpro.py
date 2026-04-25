@@ -201,7 +201,7 @@ STAGES = [
 # ==========================================
 def _pipeline_thread(ticker: str, progress_q: queue.Queue, result_box: list):
     try:
-        from state_version_2_2_1 import (
+        from backend_final import (
             fetch_data_node,
             financial_diagnostic_node,
             sentiment_node,
