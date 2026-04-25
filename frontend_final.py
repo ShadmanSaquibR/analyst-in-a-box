@@ -180,9 +180,38 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
 
 /* Logo dot */
 .logo-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* BRANDING UPDATES */
+.brand-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800 !important;
+    color: #f0f6fc;
+    letter-spacing: -0.5px;
+    background: -webkit-linear-gradient(45deg, #f0f6fc, #58a6ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.top-left-logo {
+    position: fixed;
+    top: 15px;
+    left: 20px;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
-
+# INJECT TOP-LEFT LOGO
+st.markdown(
+    f"""
+    <div class="top-left-logo">
+        <div style="width: 32px; height: 32px;">{LOGO_SVG_SMALL}</div>
+        <div class="brand-title" style="font-size: 1.4rem;">Analyst in a Box</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ==========================================
 # PIPELINE STAGES
@@ -985,13 +1014,14 @@ if not st.session_state.has_run:
             f"<div style='text-align:center; margin-bottom:14px;'>{LOGO_SVG}</div>",
             unsafe_allow_html=True,
         )
+
         st.markdown(
-            "<h1 style='text-align:center; font-size:2.8rem; margin-bottom:6px; letter-spacing:-1px;'>"
+            "<h1 class='brand-title' style='text-align:center; font-size:3.5rem; margin-bottom:6px;'>"
             "Analyst in a Box</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
-            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · Quant Finance · NLP</p>",
+            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
             unsafe_allow_html=True,
         )
 
