@@ -518,7 +518,7 @@ FOOTER_HTML = """
     <div>
       <div style='font-size:0.68rem; color:#8b949e; text-transform:uppercase;
                   letter-spacing:1.2px; margin-bottom:8px;'>Disclaimer</div>
-      <div style='font-size:0.74rem; color:#8b949e; line-height:1.7; max-width:200px;'>
+      <div style='font-size:0.74rem; font-style:italic; color:#8b949e; line-height:1.7; max-width:200px;'>
         For informational purposes only.<br>
         Not investment advice. Past performance<br>
         does not predict future results.
