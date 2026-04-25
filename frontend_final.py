@@ -978,7 +978,7 @@ render_trading_bar(cached_index_data())
 # ==========================================
 if not st.session_state.has_run:
     st.markdown("<br><br>", unsafe_allow_html=True)
-    _, , _ = st.columns([1, 1.6, 1])
+    _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
             "<h1 style='text-align:center; font-weight:0.01;letter-spacing:3px;font-size:2rem; color:#f0f6fc; border:2px solid #f0f6fc; padding:12px 32px; width:max-content; margin:0 auto 12px auto;'>"
