@@ -201,17 +201,6 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
 }
 </style>
 """, unsafe_allow_html=True)
-# INJECT TOP-LEFT BOLD TEXT
-st.markdown(
-    """
-    <div style="position: fixed; top: 18px; left: 24px; z-index: 99999; 
-                font-family: 'Inter', sans-serif; font-weight: 700; 
-                font-size: 1.25rem; color: #f0f6fc; letter-spacing: -0.5px;">
-        Analyst in a Box
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 # ==========================================
 # PIPELINE STAGES
 # ==========================================
@@ -992,8 +981,8 @@ if not st.session_state.has_run:
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
-            "<h1 style='text-align:center; font-family:\"Inter\", sans-serif; font-weight:700; font-size:3.2rem; color:#f0f6fc; margin-bottom:6px; letter-spacing:-1px;'>"
-            "Analyst in a Box</h1>"
+            "<h1 style='text-align:center; font-weight:700; font-size:3.2rem; color:#f0f6fc;'>"
+            "ANALYST IN A BOX</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
