@@ -1,7 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import time
-
+import os
+from dotenv import load_dotenv
 # ==========================================
 # 1. PAGE CONFIG & 80s AFTERDARK CSS
 # ==========================================

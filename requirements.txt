@@ -5,6 +5,7 @@ langchain-groq
 langchain-text-splitters
 transformers
 torch
+torchvision
 yfinance
 ddgs
 edgartools
