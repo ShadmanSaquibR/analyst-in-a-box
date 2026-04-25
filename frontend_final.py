@@ -994,7 +994,7 @@ if not st.session_state.has_run:
         s_col, b_col = st.columns([5, 1])
         with s_col:
             ticker_input = st.text_input(
-                "Ticker", placeholder="NVDA",
+                "Ticker", placeholder="Enter any ticker like NVDA",
                 label_visibility="collapsed", key="home_search",
             )
         with b_col:
