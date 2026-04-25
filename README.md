@@ -38,7 +38,7 @@ graph TD;
 	classDef last fill:#bfb6fc
 ```
 
-After `fetch_data` completes, the four analysis nodes run in parallel before converging at `synthesis`.
+After `fetch_data` completes, the two analysis nodes run in parallel before converging at `synthesis`.
 
 ### Node Breakdown
 
