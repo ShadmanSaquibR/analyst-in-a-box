@@ -50,8 +50,8 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
     font-style: italic !important;
 }
 .stTextInput input:focus {
-    border-color: #388bfd !important;
-    box-shadow: 0 0 0 3px rgba(56,139,253,0.15) !important;
+    border-color: #3fb950 !important;
+    box-shadow: none !important;
     outline: none !important;
 }
 /* Buttons (Updated to Hollow/Ghost Green style) */
