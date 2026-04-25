@@ -980,13 +980,6 @@ if not st.session_state.has_run:
     st.markdown("<br><br>", unsafe_allow_html=True)
     _, , _ = st.columns([1, 1.6, 1])
     with hero:
-        '''st.markdown(
-            "<h1 style='text-align:center; font-weight:0.01;letter-spacing:3px;font-size:2rem; color:#f0f6fc;'>"
-            "ANALYST IN A BOX</h1>"
-            "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
-            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
-            unsafe_allow_html=True,
-        )'''
         st.markdown(
             "<h1 style='text-align:center; font-weight:0.01;letter-spacing:3px;font-size:2rem; color:#f0f6fc; border:2px solid #f0f6fc; padding:12px 32px; width:max-content; margin:0 auto 12px auto;'>"
             "ANALYST IN A BOX</h1>"
