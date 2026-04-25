@@ -51,22 +51,30 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
     box-shadow: 0 0 0 3px rgba(56,139,253,0.15) !important;
     outline: none !important;
 }
-
 /* Buttons (Updated to Hollow/Ghost Green style) */
 .stButton button {
     background-color: transparent !important;
-    color: #3fb950 !important;
     border: 1.5px solid #3fb950 !important;
     border-radius: 6px !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
     padding: 8px 16px !important;
     width: 100%;
     transition: all 0.2s ease;
 }
+
+/* Force the text INSIDE the button to be green */
+.stButton button p {
+    color: #3fb950 !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    margin: 0 !important;
+}
+
+/* Hover state */
 .stButton button:hover { 
     background-color: rgba(63, 185, 80, 0.1) !important; 
     border-color: #3fb950 !important; 
+}
+.stButton button:hover p {
     color: #3fb950 !important;
 }
 .stDownloadButton button:hover {
