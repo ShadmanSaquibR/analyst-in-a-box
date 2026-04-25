@@ -46,6 +46,9 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
     font-size: 0.95rem !important;
     padding: 10px 14px !important;
 }
+.stTextInput input::placeholder {
+    font-style: italic !important;
+}
 .stTextInput input:focus {
     border-color: #388bfd !important;
     box-shadow: 0 0 0 3px rgba(56,139,253,0.15) !important;
@@ -991,7 +994,7 @@ if not st.session_state.has_run:
         s_col, b_col = st.columns([5, 1])
         with s_col:
             ticker_input = st.text_input(
-                "Ticker", placeholder="Enter any ticker — AAPL, MSFT, NVDA, TSLA...",
+                "Ticker", placeholder="NVDA",
                 label_visibility="collapsed", key="home_search",
             )
         with b_col:
