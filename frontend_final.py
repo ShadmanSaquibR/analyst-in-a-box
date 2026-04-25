@@ -52,29 +52,22 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
     outline: none !important;
 }
 
-/* Buttons */
+/* Buttons (Updated to Hollow/Ghost Green style) */
 .stButton button {
-    background-color: #238636 !important;
-    color: #fff !important;
-    border: 1px solid #2ea043 !important;
+    background-color: transparent !important;
+    color: #3fb950 !important;
+    border: 1.5px solid #3fb950 !important;
     border-radius: 6px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     font-size: 0.85rem !important;
     padding: 8px 16px !important;
     width: 100%;
+    transition: all 0.2s ease;
 }
-.stButton button:hover { background-color: #2ea043 !important; border-color: #3fb950 !important; }
-
-/* Download button */
-.stDownloadButton button {
-    background-color: #161b22 !important;
-    color: #c9d1d9 !important;
-    border: 1px solid #30363d !important;
-    border-radius: 6px !important;
-    font-size: 0.85rem !important;
-    padding: 9px 18px !important;
-    width: 100% !important;
-    margin-bottom: 8px !important;
+.stButton button:hover { 
+    background-color: rgba(63, 185, 80, 0.1) !important; 
+    border-color: #3fb950 !important; 
+    color: #3fb950 !important;
 }
 .stDownloadButton button:hover {
     background-color: #21262d !important;
@@ -981,7 +974,7 @@ if not st.session_state.has_run:
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
-            "<h1 style='text-align:center; font-weight:0.01;letter-spacing:2px;font-size:2rem; color:#f0f6fc;'>"
+            "<h1 style='text-align:center; font-weight:0.01;letter-spacing:3px;font-size:2rem; color:#f0f6fc;'>"
             "ANALYST IN A BOX</h1>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
             " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
