@@ -479,7 +479,7 @@ FOOTER_HTML = """
               flex-wrap:wrap; gap:24px; max-width:860px; margin:0 auto;'>
 
     <div>
-      <div style='font-size:0.9rem; font-weight:600; color:#f0f6fc; margin-bottom:5px;'>
+      <div style='font-size:0.9rem; font-weight:600; color:#f0f6fc; margin-bottom:5px;border:2px solid #f0f6fc; padding:6px 12px; display:inline-block; width:max-content;'>
         Analyst in a Box
       </div>
       <div style='font-size:0.76rem; color:#8b949e; line-height:1.7; max-width:220px;'>
