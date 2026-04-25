@@ -13,25 +13,6 @@ import yfinance as yf
 
 DEMO_MODE = os.getenv("DEMO_MODE", "0") == "1"
 # ==========================================
-# ASSETS 
-# ==========================================
-_LOGO_PATHS = """
-  <rect x="2" y="2" width="60" height="60" rx="11" fill="#161b22" stroke="#388bfd" stroke-width="2"/>
-  <line x1="8" y1="43" x2="56" y2="43" stroke="#21262d" stroke-width="1"/>
-  <circle cx="32" cy="19" r="8" stroke="#58a6ff" stroke-width="1.8" fill="none"/>
-  <path d="M13 42 Q13 31 32 31 Q51 31 51 42"
-        stroke="#58a6ff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <polyline points="10,58 20,54 30,56 41,50 54,46"
-            stroke="#3fb950" stroke-width="1.7" fill="none"
-            stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="54" cy="46" r="2.2" fill="#3fb950"/>
-"""
-LOGO_SVG = f'<svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
-LOGO_SVG_SMALL = f'<svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">{_LOGO_PATHS}</svg>'
-
-# ==========================================
-
-# ==========================================
 # PAGE CONFIG
 # ==========================================
 st.set_page_config(
@@ -220,17 +201,17 @@ hr { border-color: #21262d !important; margin: 1.2rem 0 !important; }
 }
 </style>
 """, unsafe_allow_html=True)
-# INJECT TOP-LEFT LOGO
+# INJECT TOP-LEFT BOLD TEXT
 st.markdown(
-    f"""
-    <div class="top-left-logo">
-        <div style="width: 32px; height: 32px;">{LOGO_SVG_SMALL}</div>
-        <div class="brand-title" style="font-size: 1.4rem;">Analyst in a Box</div>
+    """
+    <div style="position: fixed; top: 18px; left: 24px; z-index: 99999; 
+                font-family: 'Inter', sans-serif; font-weight: 700; 
+                font-size: 1.25rem; color: #f0f6fc; letter-spacing: -0.5px;">
+        Analyst in a Box
     </div>
     """,
     unsafe_allow_html=True
 )
-
 # ==========================================
 # PIPELINE STAGES
 # ==========================================
@@ -1003,7 +984,6 @@ for _k, _v in [("has_run", False), ("current_ticker", "")]:
 # TRADING BAR (always visible)
 # ==========================================
 render_trading_bar(cached_index_data())
-
 # ==========================================
 # HOME SCREEN
 # ==========================================
@@ -1012,21 +992,14 @@ if not st.session_state.has_run:
     _, hero, _ = st.columns([1, 1.6, 1])
     with hero:
         st.markdown(
-            f"<div style='text-align:center; margin-bottom:14px;'>{LOGO_SVG}</div>",
-            unsafe_allow_html=True,
-        )
-        
-        st.markdown(
-            "<h1 class='brand-title' style='text-align:center; font-size:3.5rem; margin-bottom:6px;'>"
+            "<h1 style='text-align:center; font-weight:700; font-size:2.8rem; margin-bottom:6px; letter-spacing:-1px;'>"
             "Analyst in a Box</h1>"
             "<p style='text-align:center; font-size:0.9rem; color:#8b949e; margin-bottom:6px;'>"
             "Institutional-grade equity research, generated in seconds.</p>"
             "<p style='text-align:center; font-size:0.75rem; color:#484f58; text-transform:uppercase;"
-            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · LLM Analysis · NLP</p>",
+            " letter-spacing:2px; margin-bottom:28px;'>SEC · Earnings Calls · News · Quant Finance · NLP</p>",
             unsafe_allow_html=True,
         )
-        
-
         s_col, b_col = st.columns([5, 1])
         with s_col:
             ticker_input = st.text_input(
