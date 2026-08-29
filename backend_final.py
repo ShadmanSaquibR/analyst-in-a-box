@@ -56,7 +56,7 @@ if not groq_api_key:
 
 # --- 2. INITIALIZE MODELS ---
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="deepseek-r1-distill-llama-70b",
     temperature=0.0,
     max_retries=5,
     api_key=groq_api_key,
