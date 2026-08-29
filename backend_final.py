@@ -56,7 +56,7 @@ if not groq_api_key:
 
 # --- 2. INITIALIZE MODELS ---
 llm = ChatGroq(
-    model="qwen/qwen3.6-27b",
+    model="openai/gpt-oss-120b",
     temperature=0.0,
     max_retries=5,
     api_key=groq_api_key,
