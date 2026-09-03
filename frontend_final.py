@@ -1127,7 +1127,7 @@ else:
             <span class='metric-pill'>SEC 10-K</span>
             <span class='metric-pill'>Earnings Call</span>
             <span class='metric-pill'>FinBERT NLP</span>
-            <span class='metric-pill'>LLaMA 3.3 70B</span>
+            <span class='metric-pill'>GPT-OSS 120B</span>
             <span class='metric-pill'>{datetime.now().strftime("%b %d, %Y")}</span>
         </div>
         """, unsafe_allow_html=True)
