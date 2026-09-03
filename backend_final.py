@@ -120,10 +120,26 @@ def _fetch_financials(ticker: str) -> str:
     inc = stock.income_stmt
     bs = stock.balance_sheet
     cf = stock.cashflow
+  
+    INCOME_ROWS = ['Total Revenue', 'Operating Income', 'Net Income', 'Diluted EPS', 'EBITDA']
+    BALANCE_ROWS = [
+    'Total Assets', 'Total Debt', 'Cash And Cash Equivalents',
+    'Stockholders Equity', 'Total Equity Gross Minority Interest',
+    'Current Assets', 'Total Current Assets',
+    'Current Liabilities', 'Total Current Liabilities',
+    ]
+    CASHFLOW_ROWS = ['Operating Cash Flow', 'Capital Expenditure', 'Free Cash Flow', 'Net Income']
 
-    income_str = inc.iloc[:, :4].to_string() if inc is not None else "Data unavailable"
-    cash_flow_str = cf.iloc[:, :4].to_string() if cf is not None else "Data unavailable"
-    bs_str = bs.iloc[:, :4].to_string() if bs is not None else "Data unavailable"
+    def _select_rows(df, wanted):
+        if df is None:
+            return "Data unavailable"
+        keep = df.index.intersection(wanted)
+        subset = df.loc[keep] if len(keep) else df
+        return subset.iloc[:, :4].to_string()
+
+    income_str = _select_rows(inc, INCOME_ROWS)
+    cash_flow_str = _select_rows(cf, CASHFLOW_ROWS)
+    bs_str = _select_rows(bs, BALANCE_ROWS)
 
     try:
         shares_out = stock.info.get('sharesOutstanding', 'N/A')
